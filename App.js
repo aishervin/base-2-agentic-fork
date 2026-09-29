@@ -3,6 +3,7 @@ import { Alert, BackHandler, Modal, Pressable, SafeAreaView, ScrollView, StyleSh
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { clearSession, getAccessToken } from './src/api/client';
+import { setAutomationEnabled } from './src/automation/automationPolicy';
 import { DEMO_MODE } from './src/config';
 import { AppHeader } from './src/components/Ui';
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -80,6 +81,7 @@ export default function App() {
     Alert.alert('خروج از برنامه', 'از حساب خارج شوید؟', [
       { text: 'انصراف', style: 'cancel' },
       { text: 'خروج', style: 'destructive', onPress: async () => {
+        await setAutomationEnabled(false).catch(() => {});
         await clearSession();
         setSession(null);
         resetTo('login');
@@ -112,7 +114,7 @@ export default function App() {
         {route.name === 'dashboard' ? <DashboardScreen session={session} onOpen={openService} /> : null}
         {route.name === 'shipments' ? <ShipmentsScreen initialStatus={route.params.status} mode={session?.mode} onSelect={document => navigate('shipment', { document })} /> : null}
         {route.name === 'shipment' ? <ShipmentDetailsScreen document={route.params.document} mode={session?.mode} onTripChanged={status => resetTo('shipments', { status })} /> : null}
-        {route.name === 'placeholder' ? <PlaceholderScreen title={route.params.title} description={route.params.description} /> : null}
+        {route.name === 'placeholder' ? <PlaceholderScreen title={route.params.title} description={route.params.description} screenKey={route.params.key} /> : null}
       </View>
       <Modal visible={drawerVisible} transparent animationType="fade" onRequestClose={() => setDrawerVisible(false)}>
         <View style={styles.drawerOverlay}>

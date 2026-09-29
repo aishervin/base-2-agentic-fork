@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEMO_MODE } from '../config';
-import { consumeUserApproval } from './approvalGate';
+import { requireAutomationEnabled } from './automationPolicy';
 import { getFreshPosition, requestTripLocationAccess, startBackgroundTracking, stopBackgroundTracking } from '../services/locationService';
 import { finishTrip, listShipments, startTrip } from '../api/tripService';
 
@@ -15,12 +15,12 @@ async function addAudit(action, documentId) {
 export const agentTools = [
   { name: 'listShipments', access: 'read' },
   { name: 'prepareTripStart', access: 'prepare' },
-  { name: 'startTrip', access: 'write', requiresUserApproval: true },
+  { name: 'startTrip', access: 'write', authorization: 'globalAutomationPolicy' },
   { name: 'prepareTripEnd', access: 'prepare' },
-  { name: 'finishTrip', access: 'write', requiresUserApproval: true },
+  { name: 'finishTrip', access: 'write', authorization: 'globalAutomationPolicy' },
 ];
 
-export async function executeAgentTool(name, args = {}, approvalNonce) {
+export async function executeAgentTool(name, args = {}) {
   if (name === 'listShipments') return listShipments(args.status || 'carrying');
   if (name === 'prepareTripStart' || name === 'prepareTripEnd') {
     if (!DEMO_MODE) {
@@ -32,7 +32,7 @@ export async function executeAgentTool(name, args = {}, approvalNonce) {
 
   if (name === 'startTrip') {
     const documentId = args.document?.id;
-    consumeUserApproval('startTrip', documentId, approvalNonce);
+    await requireAutomationEnabled('startTrip');
     let coords = { longitude: 0, latitude: 0, speed: 0, altitude: 0 };
     if (!DEMO_MODE) {
       await requestTripLocationAccess();
@@ -42,7 +42,6 @@ export async function executeAgentTool(name, args = {}, approvalNonce) {
       document: args.document,
       coords,
       havePermission: true,
-      approval: { action: 'startTrip', approved: true, byUser: true },
     });
     if (!DEMO_MODE) await startBackgroundTracking();
     await addAudit('startTrip', documentId);
@@ -51,13 +50,12 @@ export async function executeAgentTool(name, args = {}, approvalNonce) {
 
   if (name === 'finishTrip') {
     const documentId = args.documentId;
-    consumeUserApproval('finishTrip', documentId, approvalNonce);
+    await requireAutomationEnabled('finishTrip');
     let coords = { longitude: 0, latitude: 0, speed: 0, altitude: 0 };
     if (!DEMO_MODE) coords = (await getFreshPosition()).coords;
     const result = await finishTrip({
       docId: documentId,
       coords,
-      approval: { action: 'finishTrip', approved: true, byUser: true },
     });
     if (!DEMO_MODE) await stopBackgroundTracking();
     await addAudit('finishTrip', documentId);

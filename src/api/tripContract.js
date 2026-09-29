@@ -56,14 +56,7 @@ function buildEndPayload(docId, gpsList) {
   return { docId, gpsList };
 }
 
-function assertExplicitApproval(action, approval) {
-  if (approval?.action !== action || approval?.approved !== true || !approval?.byUser) {
-    throw new Error(`تأیید صریح کاربر برای ${action} الزامی است.`);
-  }
-}
-
 module.exports = {
-  assertExplicitApproval,
   buildEndPayload,
   buildGpsPoint,
   buildStartPayload,

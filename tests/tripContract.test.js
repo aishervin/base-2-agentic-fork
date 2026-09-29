@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { assertAutomationEnabled } = require('../src/automation/policyContract');
 const {
-  assertExplicitApproval,
   buildEndPayload,
   buildGpsPoint,
   buildStartPayload,
@@ -27,10 +27,11 @@ test('GPS point uses original API shape', () => {
   });
 });
 
-test('trip mutations require a matching user approval', () => {
-  assert.throws(() => assertExplicitApproval('startTrip', null), /تأیید/);
-  assert.throws(() => assertExplicitApproval('finishTrip', { action: 'startTrip', approved: true, byUser: true }), /تأیید/);
-  assert.doesNotThrow(() => assertExplicitApproval('startTrip', { action: 'startTrip', approved: true, byUser: true }));
+test('trip mutations require the global automation policy, not per-action approval', () => {
+  assert.throws(() => assertAutomationEnabled(false, 'startTrip'), /اجازه کلی اتوماسیون/);
+  assert.throws(() => assertAutomationEnabled(true, 'deleteAccount'), /فهرست مجاز/);
+  assert.doesNotThrow(() => assertAutomationEnabled(true, 'startTrip'));
+  assert.doesNotThrow(() => assertAutomationEnabled(true, 'finishTrip'));
 });
 
 test('original API timestamp helper pads date components', () => {

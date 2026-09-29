@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getShipmentDetails } from '../api/tripService';
-import { grantUserApproval } from '../automation/approvalGate';
 import { executeAgentTool } from '../automation/toolRegistry';
 import { DEMO_MODE } from '../config';
 import { colors, font } from '../theme';
@@ -18,36 +17,11 @@ export default function ShipmentDetailsScreen({ document, mode, onTripChanged })
     getShipmentDetails(document.id).then(value => setDetail({ ...document, ...value })).catch(issue => setError(issue.message));
   }, [document.id, mode]);
 
-  async function prepareAndConfirm(action) {
-    setError('');
-    setLoading(true);
-    try {
-      const tool = action === 'startTrip' ? 'prepareTripStart' : 'prepareTripEnd';
-      await executeAgentTool(tool, { document, documentId: document.id });
-      setLoading(false);
-      Alert.alert(
-        action === 'startTrip' ? 'تأیید شروع حمل' : 'تأیید پایان حمل',
-        action === 'startTrip'
-          ? 'ثبت شروع حمل برای این سند انجام شود؟ این عمل در حالت واقعی، ثبت سرور ایجاد می‌کند.'
-          : 'ثبت پایان حمل و ارسال نقاط مسیر انجام شود؟ این عمل در حالت واقعی، ثبت سرور را تغییر می‌دهد.',
-        [
-          { text: 'انصراف', style: 'cancel' },
-          { text: 'تأیید و اجرا', onPress: () => runAction(action) },
-        ],
-      );
-    } catch (issue) {
-      setError(issue.message || 'آماده‌سازی عملیات انجام نشد.');
-      setLoading(false);
-    }
-  }
-
   async function runAction(action) {
-    setLoading(true);
     setError('');
-    const nonce = grantUserApproval(action, document.id);
+    setLoading(true);
     try {
-      await executeAgentTool(action, { document, documentId: document.id }, nonce);
-      Alert.alert('عملیات موفق', mode === 'demo' ? 'عملیات فقط در نسخه نمایشی انجام شد.' : 'پاسخ موفق از سرویس دریافت شد.');
+      await executeAgentTool(action, { document, documentId: document.id });
       onTripChanged(action === 'startTrip' ? 'carrying' : 'issued');
     } catch (issue) {
       setError(issue.message || 'عملیات انجام نشد.');
@@ -80,10 +54,10 @@ export default function ShipmentDetailsScreen({ document, mode, onTripChanged })
       <PrimaryButton
         title={carrying ? 'پایان حمل' : 'شروع حمل'}
         loading={loading}
-        onPress={() => prepareAndConfirm(carrying ? 'finishTrip' : 'startTrip')}
+        onPress={() => runAction(carrying ? 'finishTrip' : 'startTrip')}
         style={styles.actionButton}
       />
-      <Text style={styles.safety}>قبل از ارسال نهایی، پنجره تأیید کاربر نمایش داده می‌شود.</Text>
+      <Text style={styles.safety}>این عملیات بدون تأیید جداگانه اجرا می‌شود؛ اجازه کلی اتوماسیون باید در تنظیمات فعال باشد.</Text>
     </ScrollView>
   );
 }

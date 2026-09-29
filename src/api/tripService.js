@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEMO_MODE } from '../config';
+import { requireAutomationEnabled } from '../automation/automationPolicy';
 import { apiRequest } from './client';
 import {
-  assertExplicitApproval,
   buildEndPayload,
   buildGpsPoint,
   buildStartPayload,
@@ -31,8 +31,8 @@ export async function getShipmentDetails(docId) {
   return response?.obj;
 }
 
-export async function startTrip({ document, coords, havePermission, approval }) {
-  assertExplicitApproval('startTrip', approval);
+export async function startTrip({ document, coords, havePermission }) {
+  await requireAutomationEnabled('startTrip');
   const payload = buildStartPayload(document.id, coords, havePermission);
   if (DEMO_MODE) {
     await AsyncStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify({ ...document, startedAt: payload.StartDate }));
@@ -45,8 +45,8 @@ export async function startTrip({ document, coords, havePermission, approval }) 
   return response;
 }
 
-export async function finishTrip({ docId, coords, approval }) {
-  assertExplicitApproval('finishTrip', approval);
+export async function finishTrip({ docId, coords }) {
+  await requireAutomationEnabled('finishTrip');
   const points = JSON.parse(await AsyncStorage.getItem(ROUTE_POINTS_KEY) || '[]');
   if (DEMO_MODE && points.length === 0) points.push(buildGpsPoint(coords));
   points.unshift(buildGpsPoint(coords));
