@@ -27,8 +27,8 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Verify runner Android SDK
+        run: test -n "$ANDROID_HOME" && test -x "$ANDROID_HOME/platform-tools/adb"
 
       - name: Run contract tests
         run: node --test tests/*.test.js
