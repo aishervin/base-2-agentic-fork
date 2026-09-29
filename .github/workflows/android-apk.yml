@@ -41,7 +41,25 @@ jobs:
           EXPO_PUBLIC_DEMO_MODE: 'true'
         run: npx expo prebuild --platform android --non-interactive
 
-      - name: Build installable debug APK
+      - name: Embed JavaScript bundle in debug APK
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'android/app/build.gradle';
+          let source = fs.readFileSync(file, 'utf8');
+          const start = source.indexOf('react {');
+          const end = start < 0 ? -1 : source.indexOf('\n}', start);
+          if (start < 0 || end < 0) throw new Error('React Gradle block was not found.');
+          let block = source.slice(start, end);
+          if (/debuggableVariants\s*=/.test(block)) {
+            block = block.replace(/debuggableVariants\s*=\s*\[[^\]]*\]/, 'debuggableVariants = []');
+          } else {
+            block += '\n    debuggableVariants = []';
+          }
+          fs.writeFileSync(file, source.slice(0, start) + block + source.slice(end));
+          NODE
+
+      - name: Build standalone debug APK
         run: cd android && ./gradlew --no-daemon assembleDebug
 
       - name: Upload APK artifact

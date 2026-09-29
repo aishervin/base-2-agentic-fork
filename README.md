@@ -25,7 +25,7 @@ npx expo run:android
 
 ## ساخت APK با GitHub Actions
 
-با هر push به شاخه `main` یا اجرای دستی workflow با نام `Android APK`، GitHub تست‌ها را اجرا و یک APK آزمایشی قابل نصب می‌سازد. فایل `app-debug.apk` را از بخش Artifacts همان اجرای workflow دریافت کنید. این build برای آزمایش است و از کلید انتشار شخصی استفاده نمی‌کند؛ حالت نمایشی فعال است.
+با هر push به شاخه `main` یا اجرای دستی workflow با نام `Android APK`، GitHub تست‌ها را اجرا و یک APK آزمایشی مستقل می‌سازد که JavaScript را درون خود دارد و به Metro نیاز ندارد. فایل `app-debug.apk` را از بخش Artifacts همان اجرای workflow دریافت کنید. این build برای آزمایش است و از کلید انتشار شخصی استفاده نمی‌کند؛ حالت نمایشی فعال است.
 
 ## GPS پس‌زمینه
 
