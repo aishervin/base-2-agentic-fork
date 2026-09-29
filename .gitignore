@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+android/
+ios/
+dist/
+*.jks
+*.keystore
+.env.local
+*.apk
+*.aab
+reference/decompiled/*.js
+assets/images/mainpagebkscreen.png
+assets/images/logintopsectionbg.png
