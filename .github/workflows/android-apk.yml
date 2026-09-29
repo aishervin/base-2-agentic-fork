@@ -51,16 +51,27 @@ jobs:
           const end = start < 0 ? -1 : source.indexOf('\n}', start);
           if (start < 0 || end < 0) throw new Error('React Gradle block was not found.');
           let block = source.slice(start, end);
-          if (/debuggableVariants\s*=/.test(block)) {
-            block = block.replace(/debuggableVariants\s*=\s*\[[^\]]*\]/, 'debuggableVariants = []');
-          } else {
-            block += '\n    debuggableVariants = []';
-          }
+          block = block.replace(/^\s*\/\/\s*debuggableVariants\s*=.*$/gm, '');
+          block = block.replace(/^\s*debuggableVariants\s*=.*$/gm, '');
+          block += '\n    debuggableVariants = []';
           fs.writeFileSync(file, source.slice(0, start) + block + source.slice(end));
           NODE
 
       - name: Build standalone debug APK
         run: cd android && ./gradlew --no-daemon assembleDebug
+
+      - name: Verify APK contains the JavaScript bundle
+        run: |
+          node <<'NODE'
+          const { execFileSync } = require('node:child_process');
+          const apk = 'android/app/build/outputs/apk/debug/app-debug.apk';
+          const entries = execFileSync('unzip', ['-Z1', apk], { encoding: 'utf8' });
+          if (!entries.split('\n').includes('assets/index.android.bundle')) {
+            throw new Error('APK is missing assets/index.android.bundle and would require Metro.');
+          }
+          const bundle = execFileSync('unzip', ['-p', apk, 'assets/index.android.bundle'], { maxBuffer: 100 * 1024 * 1024 });
+          if (bundle.length < 100_000) throw new Error('The embedded JavaScript bundle is unexpectedly small.');
+          NODE
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
