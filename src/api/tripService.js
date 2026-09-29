@@ -17,7 +17,11 @@ export const demoShipments = [
 ];
 
 export async function listShipments(status = 'carrying', pageNumber = 1) {
-  if (DEMO_MODE) return demoShipments.filter(item => status === 'all' || item.status === status);
+  if (DEMO_MODE) {
+    const activeTrip = await getActiveTrip();
+    return demoShipments.map(item => item.id === activeTrip?.id ? { ...item, status: 'carrying' } : item)
+      .filter(item => status === 'all' || item.status === status);
+  }
   const endpoint = status === 'issued' ? '/Document/GetIssuedDocuments' : '/Document/GetShippingDocuments';
   const response = await apiRequest(endpoint, {
     body: { nCarTag: null, driverNationalCode: null, docNo: null, pageNumber, pageSize: 10 },
@@ -32,7 +36,7 @@ export async function getShipmentDetails(docId) {
 }
 
 export async function startTrip({ document, coords, havePermission }) {
-  await requireAutomationEnabled('startTrip');
+  await requireAutomationEnabled('start_trip');
   const payload = buildStartPayload(document.id, coords, havePermission);
   if (DEMO_MODE) {
     await AsyncStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify({ ...document, startedAt: payload.StartDate }));
@@ -46,7 +50,7 @@ export async function startTrip({ document, coords, havePermission }) {
 }
 
 export async function finishTrip({ docId, coords }) {
-  await requireAutomationEnabled('finishTrip');
+  await requireAutomationEnabled('finish_trip');
   const points = JSON.parse(await AsyncStorage.getItem(ROUTE_POINTS_KEY) || '[]');
   if (DEMO_MODE && points.length === 0) points.push(buildGpsPoint(coords));
   points.unshift(buildGpsPoint(coords));

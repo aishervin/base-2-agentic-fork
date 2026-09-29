@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, BackHandler, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, BackHandler, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { clearSession, getAccessToken } from './src/api/client';
 import { setAutomationEnabled } from './src/automation/automationPolicy';
+import { clearScheduledTasks, recoverInterruptedScheduledTasks } from './src/automation/scheduleStore';
+import { ensureScheduledTaskRunner, runDueScheduledTasks } from './src/automation/scheduleRunner';
 import { DEMO_MODE } from './src/config';
 import { AppHeader } from './src/components/Ui';
 import DashboardScreen from './src/screens/DashboardScreen';
+import GeminiAutomationScreen from './src/screens/GeminiAutomationScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import PlaceholderScreen from './src/screens/PlaceholderScreen';
 import ShipmentDetailsScreen from './src/screens/ShipmentDetailsScreen';
@@ -48,6 +51,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!session) return undefined;
+    const tick = () => {
+      if (AppState.currentState === 'active') runDueScheduledTasks().catch(() => {});
+    };
+    recoverInterruptedScheduledTasks().then(ensureScheduledTaskRunner).catch(() => {});
+    tick();
+    const interval = setInterval(tick, 15000);
+    const scheduleCheck = setInterval(() => ensureScheduledTaskRunner().catch(() => {}), 60000);
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') tick();
+    });
+    return () => {
+      clearInterval(interval);
+      clearInterval(scheduleCheck);
+      subscription.remove();
+    };
+  }, [session?.mode]);
+
+  useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (drawerVisible) {
         setDrawerVisible(false);
@@ -71,9 +93,22 @@ export default function App() {
   }
 
   function openService(key) {
-    if (key === 'carrying') navigate('shipments', { status: 'carrying' });
+    if (key === 'automation') navigate('automation');
+    else if (key === 'carrying') navigate('shipments', { status: 'carrying' });
     else if (key === 'history') navigate('shipments', { status: 'issued' });
     else navigate('placeholder', { key, title: placeholderCopy[key]?.[0] || 'خدمات', description: placeholderCopy[key]?.[1] || '' });
+  }
+
+  function openAgentSection(section) {
+    if (section === 'dashboard') resetTo('dashboard');
+    else if (section === 'issued') resetTo('shipments', { status: 'issued' });
+    else if (section === 'carrying') resetTo('shipments', { status: 'carrying' });
+    else if (section === 'automation') resetTo('automation');
+    else openService(section);
+  }
+
+  async function syncScheduleRunner() {
+    await ensureScheduledTaskRunner();
   }
 
   async function signOut() {
@@ -82,6 +117,8 @@ export default function App() {
       { text: 'انصراف', style: 'cancel' },
       { text: 'خروج', style: 'destructive', onPress: async () => {
         await setAutomationEnabled(false).catch(() => {});
+        await clearScheduledTasks().catch(() => {});
+        await ensureScheduledTaskRunner().catch(() => {});
         await clearSession();
         setSession(null);
         resetTo('login');
@@ -92,8 +129,9 @@ export default function App() {
   if (!fontsLoaded) return <View style={styles.loading}><Text style={styles.loadingText}>در حال آماده‌سازی برنامه…</Text></View>;
 
   const title = route.name === 'dashboard' ? 'صدور بارنامه شهری'
-    : route.name === 'shipments' ? (route.params.status === 'carrying' ? 'اسناد در حال حمل' : 'تاریخچه اسناد حمل')
+      : route.name === 'shipments' ? (route.params.status === 'carrying' ? 'اسناد در حال حمل' : 'تاریخچه اسناد حمل')
       : route.name === 'shipment' ? 'جزئیات سند'
+        : route.name === 'automation' ? 'اتوماسیون Gemini'
         : route.params.title || 'خدمات';
 
   return (
@@ -112,6 +150,7 @@ export default function App() {
           />
         ) : null}
         {route.name === 'dashboard' ? <DashboardScreen session={session} onOpen={openService} /> : null}
+        {route.name === 'automation' ? <GeminiAutomationScreen onOpenSettings={() => openService('settings')} onNavigate={openAgentSection} onScheduleChanged={syncScheduleRunner} /> : null}
         {route.name === 'shipments' ? <ShipmentsScreen initialStatus={route.params.status} mode={session?.mode} onSelect={document => navigate('shipment', { document })} /> : null}
         {route.name === 'shipment' ? <ShipmentDetailsScreen document={route.params.document} mode={session?.mode} onTripChanged={status => resetTo('shipments', { status })} /> : null}
         {route.name === 'placeholder' ? <PlaceholderScreen title={route.params.title} description={route.params.description} screenKey={route.params.key} /> : null}
@@ -127,6 +166,7 @@ export default function App() {
               <DrawerItem title="صفحه اصلی" onPress={() => { setDrawerVisible(false); resetTo('dashboard'); }} />
               <DrawerItem title="اسناد در حال حمل" onPress={() => { setDrawerVisible(false); resetTo('shipments', { status: 'carrying' }); }} />
               <DrawerItem title="تاریخچه اسناد حمل" onPress={() => { setDrawerVisible(false); resetTo('shipments', { status: 'issued' }); }} />
+              <DrawerItem title="اتوماسیون Gemini" onPress={() => { setDrawerVisible(false); resetTo('automation'); }} />
               <DrawerItem title="کیف پول اعتباری" onPress={() => { setDrawerVisible(false); openService('wallet'); }} />
               <DrawerItem title="تنظیمات و حساب" onPress={() => { setDrawerVisible(false); openService('settings'); }} />
               <DrawerItem title="خروج از برنامه" onPress={signOut} danger />

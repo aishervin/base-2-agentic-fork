@@ -1,4 +1,4 @@
-const demoMode = process.env.EXPO_PUBLIC_DEMO_MODE !== 'false';
+const demoMode = process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
 
 module.exports = {
   expo: {

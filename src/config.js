@@ -1,4 +1,4 @@
-export const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE !== 'false';
+export const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
 export const API_BASE_URL = (
   process.env.EXPO_PUBLIC_API_BASE_URL ||
   'https://mobservices-barname.utcms.ir/baarnameh_sd/API'

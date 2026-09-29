@@ -38,7 +38,7 @@ jobs:
 
       - name: Generate Android project
         env:
-          EXPO_PUBLIC_DEMO_MODE: 'true'
+          EXPO_PUBLIC_DEMO_MODE: 'false'
         run: npx expo prebuild --platform android --non-interactive
 
       - name: Embed JavaScript bundle in debug APK
