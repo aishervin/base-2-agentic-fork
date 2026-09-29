@@ -28,10 +28,11 @@ test('GPS point uses original API shape', () => {
 });
 
 test('trip mutations require the global automation policy, not per-action approval', () => {
-  assert.throws(() => assertAutomationEnabled(false, 'startTrip'), /اجازه کلی اتوماسیون/);
+  assert.throws(() => assertAutomationEnabled(false, 'start_trip'), /اجازه کلی اتوماسیون/);
   assert.throws(() => assertAutomationEnabled(true, 'deleteAccount'), /فهرست مجاز/);
-  assert.doesNotThrow(() => assertAutomationEnabled(true, 'startTrip'));
-  assert.doesNotThrow(() => assertAutomationEnabled(true, 'finishTrip'));
+  assert.doesNotThrow(() => assertAutomationEnabled(true, 'start_trip'));
+  assert.doesNotThrow(() => assertAutomationEnabled(true, 'finish_trip'));
+  assert.doesNotThrow(() => assertAutomationEnabled(true, 'list_shipments'));
 });
 
 test('original API timestamp helper pads date components', () => {
